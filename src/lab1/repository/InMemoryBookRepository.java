@@ -7,7 +7,17 @@ import java.util.List;
 
 public class InMemoryBookRepository implements BookRepository{
 
+    private static final InMemoryBookRepository INSTANCE =
+            new InMemoryBookRepository();
+
     private final List<Book> books = new ArrayList<>();
+
+    private InMemoryBookRepository() {
+    }
+
+    public static InMemoryBookRepository getInstance() {
+        return INSTANCE;
+    }
 
     @Override
     public void save(Book book) {
