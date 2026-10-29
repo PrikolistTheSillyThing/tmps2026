@@ -1,31 +1,34 @@
 # Library Management System
-## SOLID Principles: SRP, OCP and DIP
+## Design Patterns: Singleton, Builder and Factory Method
 
-The project was implemented in Java as a small console-based library application. No external libraries or frameworks were used; the application logic was implemented with standard Java features.
+The project was implemented in Java as a small console-based library application. The design patterns are implemented manually using standard Java features; no external libraries or frameworks are required.
 
 ## Task Requirements
 
-1. Implement a small application that follows SOLID principles.
-2. Demonstrate at least three of the five principles in the code.
-3. Show how the design makes the system easier to extend and maintain.
+1. Implement examples of design patterns in a Java application.
+2. Demonstrate how the patterns solve common object-creation and shared-state problems.
+3. Explain how the design improves code organization, maintainability and extensibility.
 
 This lab demonstrates:
 
-- **SRP**: Single Responsibility Principle
-- **OCP**: Open/Closed Principle
-- **DIP**: Dependency Inversion Principle
+- **Singleton**: ensures that the application uses one shared `InMemoryBookRepository` instance.
+- **Builder**: constructs `Book` objects step by step and validates their required fields.
+- **Factory Method**: delegates book creation to a creator abstraction, allowing the concrete creation logic to be changed or extended.
 
 ## Project Overview
 
-The application allows a user to add, remove and find books by ID through a console menu. The design separates book data, library operations, storage and user interaction.
+The application is a small console-based library. A user can save, remove and find books by their ID through a text menu. The patterns are integrated into the existing application rather than implemented as isolated examples.
 
 ### Project Structure
 
 ```text
-lab1
+librarysystem
 ├── Book.java
 ├── Library.java
 ├── Main.java
+├── factory
+│   ├── BookCreator.java
+│   └── StandardBookCreator.java
 └── repository
     ├── BookRepository.java
     └── InMemoryBookRepository.java
@@ -33,175 +36,217 @@ lab1
 
 ### Class Diagram
 
-<img width="1360" height="1130" alt="library_system_uml" src="https://github.com/user-attachments/assets/f7ea4b86-0c53-4893-866f-480d24a9ad01" />
+<img width="1360" height="1130" alt="library_system_uml" src="https://github.com/user-attachments/assets/00576279-23f6-4e67-9e40-723666eb1ddf" />
 
-## Part A: Single Responsibility Principle (SRP)
+## Part A: Singleton Pattern
 
-> A class should have only one reason to change.
+> Ensure a class has only one instance and provide a global access point to it.
 
-Each class has a distinct responsibility:
+The Singleton pattern is implemented in `InMemoryBookRepository`. The repository stores the books in a list. If the application created a separate repository each time it needed storage, each repository would have its own list, and books saved through one instance would not be visible through another.
 
-| Class | Responsibility |
-|---|---|
-| `Book` | Holds the data for one book: ID, name, author and publication year. |
-| `Library` | Exposes library operations such as adding, removing and finding books. |
-| `BookRepository` | Defines the contract for saving, removing and finding books. |
-| `InMemoryBookRepository` | Implements the repository contract using an in-memory `List<Book>`. |
-| `Main` | Handles the console menu, user input, input validation and output. |
-
-For example, changing the menu text or input prompts should only require changes in `Main`. Changing how books are stored should be handled by a repository implementation. The `Book` class does not need to know about either the console menu or the storage mechanism.
-
-### Book
-
-`Book` represents a book and holds its data. Its fields are private, and the getters provide access to that data. It does not manage the collection of books or handle console input.
-
-```java
-public class Book {
-    private static int id = 0;
-    private final int bookId;
-    private final String name;
-    private final String author;
-    private final int publicationYear;
-
-    public Book(String name, String author, int year) {
-        bookId = id++;
-        this.name = name;
-        this.author = author;
-        publicationYear = year;
-    }
-
-    // Getters and toString() omitted.
-}
-```
-
-### Main
-
-`Main` owns the console interaction. It reads the user's choice and delegates the requested operation to `Library`.
-
-```java
-switch (choice) {
-    case 0 -> exit = true;
-    case 1 -> addBook(lib1);
-    case 2 -> removeBook(lib1);
-    case 3 -> findBook(lib1);
-    default -> System.out.println("Invalid menu option.");
-}
-```
-
-This keeps console-specific concerns out of `Library` and the repository classes.
-
-## Part B: Open/Closed Principle (OCP)
-
-> Software entities should be open for extension, but closed for modification.
-
-The application defines a `BookRepository` interface that describes the operations required by the library:
-
-```java
-package lab1.repository;
-
-import lab1.Book;
-
-public interface BookRepository {
-    void save(Book book);
-    void remove(Book book);
-    Book findById(int id);
-}
-```
-
-`InMemoryBookRepository` is one implementation of that contract. It uses a list to store books and searches the list by ID.
+The implementation uses a private constructor, a `static final` instance, and a public `getInstance()` method:
 
 ```java
 public class InMemoryBookRepository implements BookRepository {
+
+    private static final InMemoryBookRepository INSTANCE =
+            new InMemoryBookRepository();
+
     private final List<Book> books = new ArrayList<>();
 
-    @Override
-    public void save(Book book) {
-        if (findById(book.getBookId()) == null) {
-            books.add(book);
-        } else {
-            System.out.println(
-                "\"" + book.getName() + "\" already present in the library."
-            );
+    private InMemoryBookRepository() {
+    }
+
+    public static InMemoryBookRepository getInstance() {
+        return INSTANCE;
+    }
+
+    // Repository operations omitted.
+}
+```
+
+### How it works
+
+- The **private constructor** prevents other classes from creating an instance with `new InMemoryBookRepository()`.
+- The **static final `INSTANCE` field** holds the one repository instance.
+- The **`getInstance()` method** gives callers access to that shared instance.
+- The instance is initialized when the class is initialized. Java's class-initialization mechanism makes this eager initialization thread-safe.
+
+`Main` obtains the repository through the accessor:
+
+```java
+BookRepository repo = InMemoryBookRepository.getInstance();
+Library lib1 = new Library(repo);
+```
+
+The variable is declared as the `BookRepository` interface, so `Library` still depends on the abstraction rather than on the concrete repository class.
+
+### Benefits and trade-offs
+
+The pattern ensures that the application shares one in-memory collection of books and avoids accidentally creating multiple independent repository instances. However, Singleton also introduces shared global state and can make tests less isolated: data can remain in the repository between operations or tests. For a larger application, explicitly passing a repository instance through dependency injection may be easier to test and configure.
+
+## Part B: Builder Pattern
+
+> Separate the construction of a complex object from its representation, allowing it to be created step by step.
+
+The Builder pattern is implemented as the static nested `Book.Builder` class. A book requires a name, author and publication year. Instead of passing all values directly to a constructor, the caller sets each value through a chain of methods and then calls `build()`.
+
+### Builder implementation
+
+```java
+public static class Builder {
+
+    private String name;
+    private String author;
+    private int publicationYear;
+
+    public Builder name(String name) {
+        this.name = name;
+        return this;
+    }
+
+    public Builder author(String author) {
+        this.author = author;
+        return this;
+    }
+
+    public Builder publicationYear(int year) {
+        this.publicationYear = year;
+        return this;
+    }
+
+    public Book build() {
+        if (name == null || name.isBlank()) {
+            throw new IllegalStateException(
+                    "Book name is required.");
         }
-    }
 
-    @Override
-    public void remove(Book book) {
-        // Checks whether the book exists, then removes it.
-    }
+        if (author == null || author.isBlank()) {
+            throw new IllegalStateException(
+                    "Book author is required.");
+        }
 
-    @Override
-    public Book findById(int id) {
-        return books.stream()
-            .filter(book -> book.getBookId() == id)
-            .findFirst()
-            .orElse(null);
-    }
-}
-```
+        if (publicationYear <= 0) {
+            throw new IllegalStateException(
+                    "Publication year must be positive.");
+        }
 
-The design is **open for extension** because another storage implementation can be added, for example `FileBookRepository` or `DatabaseBookRepository`, by implementing `BookRepository`.
-
-It is **closed for modification** in the sense that `Library` can continue using the same interface without needing to know which storage implementation is used. The new repository provides the existing operations through the same contract.
-
-The current application chooses its implementation in `Main`. Selecting a different implementation would require changing the composition setup there, but not the business logic inside `Library`.
-
-## Part C: Dependency Inversion Principle (DIP)
-
-> High-level modules should not depend on low-level modules. Both should depend on abstractions.
-
-`Library` is the high-level module because it exposes the application's library operations. `InMemoryBookRepository` is a lower-level detail because it determines how the books are stored. Instead of directly creating or depending on `InMemoryBookRepository`, `Library` depends on the `BookRepository` interface.
-
-```java
-public class Library {
-    private final BookRepository repo;
-
-    public Library(BookRepository repo) {
-        this.repo = repo;
-    }
-
-    public void addBook(Book book) {
-        repo.save(book);
-    }
-
-    public void removeBook(Book book) {
-        repo.remove(book);
-    }
-
-    public Book findBookById(int id) {
-        return repo.findById(id);
+        return new Book(this);
     }
 }
 ```
 
-The constructor receives a repository object. This is **constructor dependency injection**: the dependency is supplied from outside the class instead of being created inside `Library`.
-
-The implementation is selected in `Main`:
+The `Book` constructor receives the builder and copies its values into the book's final fields:
 
 ```java
-BookRepository repo = new InMemoryBookRepository();
-Library lib1 = new Library(repo);
+public Book(Builder builder) {
+    bookId = id++;
+    this.name = builder.name;
+    this.author = builder.author;
+    this.publicationYear = builder.publicationYear;
+}
+
+public static Builder builder() {
+    return new Builder();
+}
 ```
 
-If a new implementation were added, the setup could instead use:
+### Using the Builder
+
+The builder allows the book's fields to be specified in a readable sequence:
 
 ```java
-BookRepository repo = new FileBookRepository(); // Hypothetical implementation
-Library lib1 = new Library(repo);
+Book book = Book.builder()
+        .name(name)
+        .author(author)
+        .publicationYear(year)
+        .build();
 ```
 
-`FileBookRepository` is only an example; it is not implemented in this project. The important point is that `Library` does not need to change as long as the new class correctly implements `BookRepository`.
+In this project, the Builder is used by `StandardBookCreator` when creating a book. Calling `build()` validates the data before a `Book` object is returned. If a required value is missing or invalid, an `IllegalStateException` is thrown. `Main` catches that exception and displays its message instead of adding an invalid book.
 
-This separation also helps testing. A test can pass a fake or test repository into `Library` to verify that library operations delegate correctly, without relying on the real storage implementation.
+### Benefits
+
+- **Readability:** each field is named at the point where it is set.
+- **Validation:** required fields are checked in one place before the object is created.
+- **Maintainability:** if construction becomes more complicated, the builder can handle that complexity without adding a long list of constructor parameters.
+- **Immutability of book fields:** the resulting `Book` stores its main properties in `final` fields.
+
+The Builder is useful here because the creation process is explicit and validation is centralized. For only three simple fields, a constructor could also be reasonable; the pattern becomes more valuable as the number of optional or interdependent fields grows.
+
+## Part C: Factory Method Pattern
+
+> Define a creation method in a base type and let a subclass decide which concrete creation implementation to use.
+
+The Factory Method pattern is represented by `BookCreator` and `StandardBookCreator`. The abstract creator defines the method contract, while the concrete creator implements how a book is created.
+
+### Abstract creator
+
+```java
+public abstract class BookCreator {
+
+    public abstract Book createBook(
+            String name,
+            String author,
+            int year
+    );
+}
+```
+
+`BookCreator` declares the creation operation but does not specify its implementation. Code that uses a creator can work with this abstract type.
+
+### Concrete creator
+
+```java
+public class StandardBookCreator extends BookCreator {
+
+    @Override
+    public Book createBook(String name, String author, int year) {
+        return Book.builder()
+                .name(name)
+                .author(author)
+                .publicationYear(year)
+                .build();
+    }
+}
+```
+
+`StandardBookCreator` implements the factory method and uses the Builder pattern to assemble the object. The two patterns therefore have different responsibilities: the factory decides which creation implementation is used, while the builder handles the step-by-step construction and validation of a `Book`.
+
+### Integration in Main
+
+`Main` creates a creator and passes it to the book-adding operation:
+
+```java
+BookCreator creator = new StandardBookCreator();
+
+// When the user chooses to add a book:
+addBook(lib1, creator);
+```
+
+The `addBook` method calls the abstraction rather than directly constructing a `Book`:
+
+```java
+Book book = creator.createBook(name, author, year);
+lib.addBook(book);
+```
+
+### Extensibility
+
+A different creator could later implement a different book-creation process—for example, a creator that applies another set of defaults or creates a specialized book type if the model is extended. The calling code can continue using `BookCreator`.
+
+In the current project, only `StandardBookCreator` exists, and it always creates the same `Book` type. The benefit is therefore primarily a separation of responsibilities and a defined extension point; the application does not yet demonstrate switching between multiple concrete creators at runtime.
 
 ## Application Flow
 
-1. `Main` creates an `InMemoryBookRepository` and passes it to `Library`.
-2. The menu loop reads the user's choice.
-3. `Main` collects and validates any required input.
-4. `Main` calls the corresponding method on `Library`.
-5. `Library` delegates the storage operation to `BookRepository`.
-6. The result is returned to `Main` and displayed to the user.
+1. `Main` obtains the shared repository from `InMemoryBookRepository.getInstance()`.
+2. `Main` passes the repository to `Library`.
+3. `Main` creates a `StandardBookCreator`, referenced through the `BookCreator` abstraction.
+4. When the user chooses to add a book, `Main` collects the name, author and publication year.
+5. `BookCreator.createBook()` delegates creation to `StandardBookCreator`.
+6. `StandardBookCreator` uses `Book.Builder` to set the fields and validate them.
+7. The resulting `Book` is passed to `Library`, which delegates storage to the repository.
+8. The repository stores the book in the shared list.
 
 ### Menu Options
 
@@ -213,17 +258,18 @@ Press 2 to remove a book
 Press 3 to find a book
 ```
 
-### Input Validation
+### Input and Object Validation
 
-- Non-numeric menu choices and IDs are handled with `NumberFormatException`.
-- A non-numeric publication year cancels the add operation.
-- Attempts to find or remove an unknown book ID display a message.
+- Non-numeric menu choices, IDs and publication years are handled with `NumberFormatException`.
+- An empty book name or author is rejected by the builder.
+- A publication year less than or equal to zero is rejected by the builder.
+- Invalid book data results in an error message, and the book is not added.
 
 ## Overall Logic
 
-- **SRP:** Book data, library operations, storage and console interaction are separated into different classes.
-- **OCP:** Additional repository implementations can be introduced through the `BookRepository` interface.
-- **DIP:** `Library` depends on the repository abstraction rather than a concrete storage class.
-- **Maintainability and testability:** Storage details can be replaced, and `Library` can be tested with an alternative repository implementation.
+- **Singleton:** `InMemoryBookRepository` provides one shared in-memory repository instance.
+- **Builder:** `Book.Builder` assembles a book through a readable chain of calls and validates the required fields before construction.
+- **Factory Method:** `BookCreator` defines the creation contract, and `StandardBookCreator` provides its implementation.
+- **Combined design:** the factory uses the builder, while the application uses the singleton repository for shared storage.
 
-Together, these principles provide a small but practical example of separating responsibilities and making the application easier to extend.
+The patterns address different concerns rather than duplicating one another. Singleton controls access to the repository instance, Builder organizes the construction of a valid `Book`, and Factory Method separates the request to create a book from the concrete creation logic. This makes the code easier to understand and gives it clear places for future changes, while also introducing trade-offs—particularly the shared state associated with Singleton and the extra abstraction of a factory when only one creator is currently available.
