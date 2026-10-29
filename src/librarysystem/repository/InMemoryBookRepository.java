@@ -1,6 +1,6 @@
-package lab1.repository;
+package librarysystem.repository;
 
-import lab1.Book;
+import librarysystem.Book;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,6 +1,6 @@
-package lab1.factory;
+package librarysystem.factory;
 
-import lab1.Book;
+import librarysystem.Book;
 
 public class StandardBookCreator extends BookCreator {
 

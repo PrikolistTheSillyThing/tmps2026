@@ -1,7 +1,7 @@
 
-package lab1;
+package librarysystem;
 
-import lab1.repository.BookRepository;
+import librarysystem.repository.BookRepository;
 
 public class Library {
     private final BookRepository repo;

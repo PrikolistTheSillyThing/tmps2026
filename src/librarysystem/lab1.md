@@ -25,7 +25,7 @@ The application is a small console-based library. A user can save, remove and fi
 ### Project Structure
 
 ```
-lab1
+librarysystem
 ├── Book.java
 ├── Library.java
 ├── Main.java
@@ -97,13 +97,15 @@ default -> System.out.println("Invalid menu option.");
 The storage mechanism is hidden behind the `BookRepository` interface:
 
 ```java
-package lab1.repository;
+package librarysystem.repository;
 
-import lab1.Book;
+import librarysystem.Book;
 
 public interface BookRepository {
     void save(Book book);
+
     void remove(Book book);
+
     Book findById(int id);
 }
 ```

@@ -1,10 +1,10 @@
 
-package lab1;
+package librarysystem;
 
-import lab1.repository.BookRepository;
-import lab1.repository.InMemoryBookRepository;
-import lab1.factory.BookCreator;
-import lab1.factory.StandardBookCreator;
+import librarysystem.repository.BookRepository;
+import librarysystem.repository.InMemoryBookRepository;
+import librarysystem.factory.BookCreator;
+import librarysystem.factory.StandardBookCreator;
 
 import java.util.Scanner;
 

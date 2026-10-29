@@ -1,4 +1,4 @@
-package lab1;
+package librarysystem;
 
 public class Book {
     private static int id = 0;
