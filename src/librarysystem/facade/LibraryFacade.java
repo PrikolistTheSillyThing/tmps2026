@@ -4,9 +4,7 @@ import librarysystem.Book;
 import librarysystem.Library;
 import librarysystem.factory.BookCreator;
 
-/**
- * Provides one simple entry point for the application's common library tasks.
- */
+
 public class LibraryFacade {
     private final Library library;
     private final BookCreator bookCreator;
@@ -34,5 +32,9 @@ public class LibraryFacade {
 
     public Book findBookById(int id) {
         return library.findBookById(id);
+    }
+
+    public Iterable<Book> getBooks() {
+        return library;
     }
 }

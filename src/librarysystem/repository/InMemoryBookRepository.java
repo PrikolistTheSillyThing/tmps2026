@@ -3,6 +3,7 @@ package librarysystem.repository;
 import librarysystem.Book;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class InMemoryBookRepository implements BookRepository{
@@ -43,5 +44,10 @@ public class InMemoryBookRepository implements BookRepository{
                 .filter(p -> p.getBookId() == id)
                 .findFirst()
                 .orElse(null);
+    }
+
+    @Override
+    public Iterator<Book> iterator() {
+        return List.copyOf(books).iterator();
     }
 }

@@ -3,9 +3,8 @@ package librarysystem.proxy;
 import librarysystem.Book;
 import librarysystem.repository.BookRepository;
 
-/**
- * Adds logging around a repository without changing the repository itself.
- */
+import java.util.Iterator;
+
 public class LoggingBookRepositoryProxy implements BookRepository {
     private final BookRepository target;
 
@@ -29,5 +28,11 @@ public class LoggingBookRepositoryProxy implements BookRepository {
     public Book findById(int id) {
         System.out.println("[Repository log] Looking up book ID: " + id);
         return target.findById(id);
+    }
+
+    @Override
+    public Iterator<Book> iterator() {
+        System.out.println("[Repository log] Listing books");
+        return target.iterator();
     }
 }
